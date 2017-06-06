@@ -33,30 +33,34 @@ PART 1
 ##test.to_csv('test2.csv',index=0)
 train=pd.read_csv('train.csv')
 test=pd.read_csv('test.csv')
+test['y']=np.nan
+train_id =len(train)
+total=pd.concat([train,test], axis=0)
 ##
 ##
-'''
+# find all categorical features
+cf = total.select_dtypes(include=['object']).columns
 
-convert string to interger
-'''
-for i in train.keys():
-    if train[i].dtype=='O':
-        print i
-        #test first
-        temp=train.groupby(i).y.mean().to_dict()
-        temp2={}
-        counter=0
-        for j in sorted([ (temp[x],x)  for x  in temp]):
-            temp2[j[1]]=counter
-            counter +=1
-        temp=train.groupby(i).y.mean().to_dict()
-        #test[i+'_2']=test[i].map(temp)        
-        test[i]=test[i].map(temp2)
-        train[i]=train[i].map(temp2)
+# make one-hot-encoding convenient way - pandas.get_dummies(df) function
+dummies = pd.get_dummies(
+    total[cf],
+    drop_first=False # you can set it = True to ommit multicollinearity (crucial for linear models)
+)
 
-y_train = train["y"]
-y_mean = np.mean(y_train)    
-        
+# get rid of old columns and append them encoded
+total = pd.concat(
+    [
+        total.drop(cf, axis=1), # drop old
+        dummies # append them one-hot-encoded
+    ],
+    axis=1 # column-wise
+)
+train=total.iloc[0:train_id]
+test=total.iloc[train_id:]
+#del total
+
+
+
 ##        for value in train[i].unique():
 ##            temp=train[train[i]==value]
 ##            List=list(temp.index)
@@ -96,7 +100,7 @@ for i in train.keys():
                 print test.iloc[missing]
             
         except KeyError:
-            print i
+            print i,'error'
 train=train.fillna(0)
 test=test.fillna(0)
 n_comp = 10
@@ -104,12 +108,27 @@ n_comp = 10
 # PCA
 pca = PCA(n_components=n_comp, random_state=42)
 pca2_results_train = pca.fit_transform(train.drop(["y"], axis=1))
-pca2_results_test = pca.transform(test)
+pca2_results_test = pca.transform(test.drop(["y"], axis=1))
+
+pca2 = PCA(n_components=100, random_state=42)
+temp_train = pca2.fit_transform(train.drop(["y"], axis=1))
+temp_test = pca2.transform(test.drop(["y"], axis=1))
 
 # ICA
 ica = FastICA(n_components=n_comp, random_state=42)
 ica2_results_train = ica.fit_transform(train.drop(["y"], axis=1))
-ica2_results_test = ica.transform(test)
+ica2_results_test = ica.transform(test.drop(["y"], axis=1))
+
+# TNSE
+from sklearn.manifold import TSNE
+tsne_comp=3
+tsne = TSNE(n_components=tsne_comp, random_state=42)
+tsne_all = tsne.fit_transform(total.drop(["y"], axis=1))
+tsne2_results_train = tsne_all[0:train_id]
+tsne2_results_test =  tsne_all[train_id:]
+
+
+
 
 # Append decomposition components to datasets
 for i in range(1, n_comp+1):
@@ -118,12 +137,18 @@ for i in range(1, n_comp+1):
     
     train['ica_' + str(i)] = ica2_results_train[:,i-1]
     test['ica_' + str(i)] = ica2_results_test[:, i-1]
+    if i <= tsne_comp:
+        train['tnse_' + str(i)] = tnse2_results_train[:,i-1]
+        test['tnse_' + str(i)] = tnse2_results_test[:, i-1]
 
 train.to_csv('train4.csv',index=0)
 test.to_csv('test4.csv',index=0)
 train=pd.read_csv('train4.csv')
 test=pd.read_csv('test4.csv')
+train = train.T.drop_duplicates().T
 predictors=[i for i in train.keys() if i not in ['ID','y']]
+test=train['predictors']
+
 target='y'
 params = {}
 params["objective"] = "reg:linear"
