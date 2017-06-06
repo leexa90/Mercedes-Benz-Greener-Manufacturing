@@ -50,8 +50,8 @@ seed = 42 # was 42
 # In[2]:
 
 # Read datasets
-train = pd.read_csv('train.csv')
-test = pd.read_csv('test.csv')
+train = pd.read_csv('train4.csv')
+test = pd.read_csv('test4.csv')
 train = train.T.drop_duplicates().T
 predictors=[i for i in train.keys() if i not in ['y',]]
 test=test[predictors]
@@ -65,30 +65,30 @@ print('initial shape: {}'.format(total.shape))
 # binary indexes for train/test set split
 is_train = ~total.y.isnull()
 
-# find all categorical features
-cf = total.select_dtypes(include=['object']).columns
-
-# make one-hot-encoding convenient way - pandas.get_dummies(df) function
-dummies = pd.get_dummies(
-    total[cf],
-    drop_first=False # you can set it = True to ommit multicollinearity (crucial for linear models)
-)
-
-print('oh-encoded shape: {}'.format(dummies.shape))
-
-# get rid of old columns and append them encoded
-total = pd.concat(
-    [
-        total.drop(cf, axis=1), # drop old
-        dummies # append them one-hot-encoded
-    ],
-    axis=1 # column-wise
-)
-
-print('appended-encoded shape: {}'.format(total.shape))
+# find all categorical features, uncomment if cat var exist
+##cf = total.select_dtypes(include=['object']).columns
+##print cf
+### make one-hot-encoding convenient way - pandas.get_dummies(df) function
+##dummies = pd.get_dummies(
+##    total[cf],
+##    drop_first=False # you can set it = True to ommit multicollinearity (crucial for linear models)
+##)
+##
+##print('oh-encoded shape: {}'.format(dummies.shape))
+##
+##### get rid of old columns and append them encoded
+####total = pd.concat( 
+####    [
+####        total.drop(cf, axis=1), # drop old
+####        dummies # append them one-hot-encoded
+####    ],
+####    axis=1 # column-wise
+####)
+##
+##print('appended-encoded shape: {}'.format(total.shape))
 
 # recreate train/test again, now with dropped ID column
-train, test = total[is_train].drop(['ID'], axis=1), total[~is_train].drop(['ID', 'y'], axis=1)
+train, test = total[is_train], total[~is_train]
 
 # drop redundant objects
 del total
@@ -116,64 +116,64 @@ train_scaled = ss.transform(train.drop('y', axis=1).copy())
 test_scaled = ss.transform(test.copy())
 '''
 
-# PCA
-pca = PCA(n_components=n_comp, random_state=seed)
-pca2_results_train = pca.fit_transform(train_scaled)
-pca2_results_test = pca.transform(test_scaled)
-
-# ICA
-ica = FastICA(n_components=n_comp, random_state=seed,max_iter=500)
-ica2_results_train = ica.fit_transform(train_scaled)
-ica2_results_test = ica.transform(test_scaled)
-
-# Append it to dataframes
-for i in range(1, n_comp+1):
-    train['pca_' + str(i)] = pca2_results_train[:,i-1]
-    test['pca_' + str(i)] = pca2_results_test[:, i-1]
-    
-    train['ica_' + str(i)] = ica2_results_train[:,i-1]
-    test['ica_' + str(i)] = ica2_results_test[:, i-1]
+### PCA
+##pca = PCA(n_components=n_comp, random_state=seed)
+##pca2_results_train = pca.fit_transform(train_scaled)
+##pca2_results_test = pca.transform(test_scaled)
+##
+### ICA
+##ica = FastICA(n_components=n_comp, random_state=seed,max_iter=500)
+##ica2_results_train = ica.fit_transform(train_scaled)
+##ica2_results_test = ica.transform(test_scaled)
+##
+### Append it to dataframes
+##for i in range(1, n_comp+1):
+##    train['pca_' + str(i)] = pca2_results_train[:,i-1]
+##    test['pca_' + str(i)] = pca2_results_test[:, i-1]
+##    
+##    train['ica_' + str(i)] = ica2_results_train[:,i-1]
+##    test['ica_' + str(i)] = ica2_results_test[:, i-1]
    
 
 
 # 
 
-# In[4]:
-
-# create augmentation by feature importances as additional features
-t = train['y']
-tr = train.drop(['y'], axis=1)
-
-# Tree-based estimators can be used to compute feature importances
-clf = GradientBoostingRegressor(
-                max_depth=4, 
-                learning_rate=0.005, 
-                random_state=seed, 
-                subsample=0.95, 
-                n_estimators=200
-)
-
-# fit regressor
-clf.fit(tr, t)
-
-# df to hold feature importances
-features = pd.DataFrame()
-features['feature'] = tr.columns
-features['importance'] = clf.feature_importances_
-features.sort_values(by=['importance'], ascending=True, inplace=True)
-features.set_index('feature', inplace=True)
-
-# select best features
-model = SelectFromModel(clf, prefit=True)
-train_reduced = model.transform(tr)
-
-
-test_reduced = model.transform(test.copy())
-
-# dataset augmentation
-train = pd.concat([train, pd.DataFrame(train_reduced)], axis=1)
-test = pd.concat([test, pd.DataFrame(test_reduced)], axis=1)
-
+### In[4]:
+##
+### create augmentation by feature importances as additional features
+##t = train['y']
+##tr = train.drop(['y'], axis=1)
+##
+### Tree-based estimators can be used to compute feature importances
+##clf = GradientBoostingRegressor(
+##                max_depth=4, 
+##                learning_rate=0.005, 
+##                random_state=seed, 
+##                subsample=0.95, 
+##                n_estimators=200
+##)
+##
+### fit regressor
+##clf.fit(tr, t)
+##
+### df to hold feature importances
+##features = pd.DataFrame()
+##features['feature'] = tr.columns
+##features['importance'] = clf.feature_importances_
+##features.sort_values(by=['importance'], ascending=True, inplace=True)
+##features.set_index('feature', inplace=True)
+##
+### select best features
+##model = SelectFromModel(clf, prefit=True)
+##train_reduced = model.transform(tr)
+##
+##
+##test_reduced = model.transform(test.copy())
+##die
+### dataset augmentation
+##train = pd.concat([train, pd.DataFrame(train_reduced)], axis=1)
+##test = pd.concat([test, pd.DataFrame(test_reduced)], axis=1)
+##
 # check new shape
 print('\nTrain shape: {}\nTest shape: {}'.format(train.shape, test.shape))
 
@@ -188,7 +188,7 @@ from keras import backend as K
 def r2_keras(y_true, y_pred):
     SS_res =  K.sum(K.square( y_true - y_pred )) 
     SS_tot = K.sum(K.square( y_true - K.mean(y_true) ) ) 
-    return ( 1 - SS_res/(SS_tot + K.epsilon()) )
+    return ( 1 - SS_res/(SS_tot+0.0001))
 
 
 # 
@@ -226,14 +226,14 @@ def model():
                  )
     
     # Visualize NN architecture
-    print(model.summary())
+    #print(model.summary())
     return model
 
 
 # In[7]:
 
 # initialize input dimension
-input_dims = train.shape[1]-1
+input_dims = train.shape[1]-2 #ID and y
 
 #activation functions for hidden layers
 act_func = 'tanh' # could be 'relu', 'sigmoid', ...
@@ -258,6 +258,7 @@ print(X.shape)
 
 # X_test preparation
 X_test = test
+X_te = test.values
 print(X_test.shape)
 
 # train/validation split
@@ -291,16 +292,53 @@ callbacks = [
 ]
 
 # fit estimator
-estimator.fit(
-    X_tr, 
-    y_tr, 
-    epochs=10, # increase it to 20-100 to get better results
-    validation_data=(X_val, y_val),
-    verbose=2,
-    callbacks=callbacks,
-    shuffle=True
-)
+# train/validation split
 
+
+
+train=train.sample(frac=1)
+for tries in range(0,10):
+    max_n=5
+    # X, y preparation
+    X, y = train.drop(['ID','y'], axis=1).values, train.y.values
+    print(X.shape)
+
+    # X_test preparation
+    X_test = test
+    X_te = test.drop(['ID','y'], axis=1).values
+    print(X_test.shape)
+    pred_train=train[['ID']].copy()
+    pred_test=test[['ID']].copy()
+    pred_train['pred'+str(tries)]=0
+    pred_test['pred'+str(tries)]=0
+    for validation in range(0,max_n):
+        dtrain_index= [ i for i in range(len(train)) if i%max_n != validation]
+        X_tr, X_val = X[dtrain_index],X[validation::max_n]
+        y_tr, y_val = y[dtrain_index],y[validation::max_n]
+        
+        estimator.fit(
+            X_tr, 
+            y_tr, 
+            epochs=30, # increase it to 20-100 to get better results
+            validation_data=(X_val, y_val),
+            verbose=2,
+            callbacks=callbacks,
+            shuffle=True
+        )
+        temp=pred_train.set_value(
+            range(validation,len(train),max_n),
+            'pred'+str(tries),
+            estimator.predict(X_val,verbose=0)
+            )
+        temp=pred_test.set_value(
+            test.index,
+            'pred'+str(tries),
+            pred_test['pred'+str(tries)]+estimator.predict(X_te,verbose=0)/max_n
+            )
+                    
+    
+    
+die
 
 # 
 

@@ -107,23 +107,23 @@ n_comp = 10
 
 # PCA
 pca = PCA(n_components=n_comp, random_state=42)
-pca2_results_train = pca.fit_transform(train.drop(["y"], axis=1))
-pca2_results_test = pca.transform(test.drop(["y"], axis=1))
+pca2_results_train = pca.fit_transform(train.drop(["y",'ID'], axis=1))
+pca2_results_test = pca.transform(test.drop(["y",'ID'], axis=1))
 
 pca2 = PCA(n_components=100, random_state=42)
-temp_train = pca2.fit_transform(train.drop(["y"], axis=1))
-temp_test = pca2.transform(test.drop(["y"], axis=1))
+temp_train = pca2.fit_transform(train.drop(["y",'ID'], axis=1))
+temp_test = pca2.transform(test.drop(["y",'ID'], axis=1))
 
 # ICA
 ica = FastICA(n_components=n_comp, random_state=42)
-ica2_results_train = ica.fit_transform(train.drop(["y"], axis=1))
-ica2_results_test = ica.transform(test.drop(["y"], axis=1))
+ica2_results_train = ica.fit_transform(train.drop(["y",'ID'], axis=1))
+ica2_results_test = ica.transform(test.drop(["y",'ID'], axis=1))
 
 # TNSE
 from sklearn.manifold import TSNE
-tsne_comp=3
+tsne_comp=2
 tsne = TSNE(n_components=tsne_comp, random_state=42)
-tsne_all = tsne.fit_transform(total.drop(["y"], axis=1))
+tsne_all = tsne.fit_transform(total.drop(["y",'ID'], axis=1))
 tsne2_results_train = tsne_all[0:train_id]
 tsne2_results_test =  tsne_all[train_id:]
 
@@ -138,8 +138,8 @@ for i in range(1, n_comp+1):
     train['ica_' + str(i)] = ica2_results_train[:,i-1]
     test['ica_' + str(i)] = ica2_results_test[:, i-1]
     if i <= tsne_comp:
-        train['tnse_' + str(i)] = tnse2_results_train[:,i-1]
-        test['tnse_' + str(i)] = tnse2_results_test[:, i-1]
+        train['tnse_' + str(i)] = tsne2_results_train[:,i-1]
+        test['tnse_' + str(i)] = tsne2_results_test[:, i-1]
 
 train.to_csv('train4.csv',index=0)
 test.to_csv('test4.csv',index=0)
