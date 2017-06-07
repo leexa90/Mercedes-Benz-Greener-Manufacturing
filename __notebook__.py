@@ -188,9 +188,13 @@ from keras import backend as K
 def r2_keras(y_true, y_pred):
     SS_res =  K.sum(K.square( y_true - y_pred )) 
     SS_tot = K.sum(K.square( y_true - K.mean(y_true) ) ) 
-    return ( 1 - SS_res/(SS_tot+0.0001))
+    return ( 1 - (SS_res/(SS_tot+0.0001)))
 
-
+def r2_keras_array(y_true, y_pred):
+    SS_res =  np.sum(( y_true - y_pred )**2) 
+    SS_tot = np.sum(( y_true - np.mean(y_true))**2 )
+    print SS_res,SS_tot
+    return ( 1 - (SS_res/(SS_tot+0.0001)))
 # 
 
 # In[6]:
@@ -214,7 +218,12 @@ def model():
     model.add(Activation(act_func))
     model.add(Dropout(0.3))
     
-    model.add(Dense(input_dims//4, activation=act_func))
+    model.add(Dense(input_dims//5))
+    model.add(BatchNormalization())
+    model.add(Activation(act_func))
+    model.add(Dropout(0.3))
+    
+    model.add(Dense(input_dims//10, activation=act_func))
     
     # output layer (y_pred)
     model.add(Dense(1, activation='linear'))
@@ -295,17 +304,25 @@ callbacks = [
 # train/validation split
 
 
+from sklearn.metrics import r2_score
+def xgb_r2_score(preds, dtrain):
+    SS_res =  np.sum(( dtrain - preds )**2) 
+    SS_tot = np.sum(( dtrain - np.mean(dtrain))**2 )
+    return ( 1 - (SS_res/(SS_tot+0.0001)))
+def xgb_r2_score(preds, dtrain):
+    return r2_score(dtrain,y_true)
 
-train=train.sample(frac=1)
 for tries in range(0,10):
     max_n=5
     # X, y preparation
-    X, y = train.drop(['ID','y'], axis=1).values, train.y.values
+    train=train.sample(frac=1).reset_index(drop=1)
+    predictors = [x for x in train.keys() if 'pred' not in x]
+    X, y = train[predictors].drop(['ID','y'], axis=1).values, train.y.values
     print(X.shape)
-
+    
     # X_test preparation
     X_test = test
-    X_te = test.drop(['ID','y'], axis=1).values
+    X_te = test[predictors].drop(['ID','y'], axis=1).values
     print(X_test.shape)
     pred_train=train[['ID']].copy()
     pred_test=test[['ID']].copy()
@@ -319,14 +336,15 @@ for tries in range(0,10):
         estimator.fit(
             X_tr, 
             y_tr, 
-            epochs=30, # increase it to 20-100 to get better results
+            epochs=40, # increase it to 20-100 to get better results
             validation_data=(X_val, y_val),
-            verbose=2,
+            verbose=0,
             callbacks=callbacks,
             shuffle=True
         )
         temp=pred_train.set_value(
-            range(validation,len(train),max_n),
+            range(validation,len(train)
+                  ,max_n),
             'pred'+str(tries),
             estimator.predict(X_val,verbose=0)
             )
@@ -335,9 +353,14 @@ for tries in range(0,10):
             'pred'+str(tries),
             pred_test['pred'+str(tries)]+estimator.predict(X_te,verbose=0)/max_n
             )
-                    
-    
-    
+    train=train.merge(pred_train,on='ID')
+    test=test.merge(pred_test,on='ID')
+    print xgb_r2_score(train['pred'+str(tries)],train.y)
+train['ID']=train['ID'].astype(np.int32)
+test['ID']=test['ID'].astype(np.int32)
+predictors=[x for x in train.keys() if 'pred' in x]
+train[predictors+['y',]].to_csv('train_keras.csv',index=0)    
+test[predictors].to_csv('test_keras.csv',index=0)
 die
 
 # 

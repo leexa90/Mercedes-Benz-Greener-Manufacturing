@@ -71,88 +71,88 @@ test=total.iloc[train_id:]
 ##                temp3=np.mean(temp2.y)
 ##                train=train.set_value(List[num],i+'_2',temp3)
         #train[i]=train[i].astype(np.float64)
-train.to_csv('train3.csv',index=0)
-test.to_csv('test3.csv',index=0)
-'''
-Part2
-'''
-train=pd.read_csv('train3.csv')
-test=pd.read_csv('test3.csv')
-for i in train.keys():
-    if len(train[i].unique())==1:
-        print i        
-        del train[i]
-        del test[i]
-from sklearn.decomposition import PCA, FastICA
-from scipy import stats
-for i in train.keys():
-    if len(train[i].unique())==1:
-        print i        
-        del train[i]
-        del test[i]
-    else:
-        try:
-            if np.mean(test[i].isnull()) !=0.0:
-                missing= test[test[i].isnull()][i].index
-                print test[test[i].isnull()]
-                # fill missing with mode
-                test.set_value(missing,i,stats.mode(train[i])[0][0])
-                print test.iloc[missing]
-            
-        except KeyError:
-            print i,'error'
-train=train.fillna(0)
-test=test.fillna(0)
-n_comp = 10
+##train.to_csv('train3.csv',index=0)
+##test.to_csv('test3.csv',index=0)
+##'''
+##Part2
+##'''
+##train=pd.read_csv('train3.csv')
+##test=pd.read_csv('test3.csv')
+##for i in train.keys():
+##    if len(train[i].unique())==1:
+##        print i        
+##        del train[i]
+##        del test[i]
+##from sklearn.decomposition import PCA, FastICA
+##from scipy import stats
+##for i in train.keys():
+##    if len(train[i].unique())==1:
+##        print i        
+##        del train[i]
+##        del test[i]
+##    else:
+##        try:
+##            if np.mean(test[i].isnull()) !=0.0:
+##                missing= test[test[i].isnull()][i].index
+##                print test[test[i].isnull()]
+##                # fill missing with mode
+##                test.set_value(missing,i,stats.mode(train[i])[0][0])
+##                print test.iloc[missing]
+##            
+##        except KeyError:
+##            print i,'error'
+##train=train.fillna(0)
+##test=test.fillna(0)
+##n_comp = 10
+##
+### PCA
+##pca = PCA(n_components=n_comp, random_state=42)
+##pca2_results_train = pca.fit_transform(train.drop(["y",'ID'], axis=1))
+##pca2_results_test = pca.transform(test.drop(["y",'ID'], axis=1))
+##
+##pca2 = PCA(n_components=100, random_state=42)
+##temp_train = pca2.fit_transform(train.drop(["y",'ID'], axis=1))
+##temp_test = pca2.transform(test.drop(["y",'ID'], axis=1))
+##
+### ICA
+##ica = FastICA(n_components=n_comp, random_state=42)
+##ica2_results_train = ica.fit_transform(train.drop(["y",'ID'], axis=1))
+##ica2_results_test = ica.transform(test.drop(["y",'ID'], axis=1))
+##
+### TNSE
+##from sklearn.manifold import TSNE
+##tsne_comp=2
+##tsne = TSNE(n_components=tsne_comp, random_state=42)
+##tsne_all = tsne.fit_transform(total.drop(["y",'ID'], axis=1))
+##tsne2_results_train = tsne_all[0:train_id]
+##tsne2_results_test =  tsne_all[train_id:]
+##
+##
+##
+##
+### Append decomposition components to datasets
+##for i in range(1, n_comp+1):
+##    train['pca_' + str(i)] = pca2_results_train[:,i-1]
+##    test['pca_' + str(i)] = pca2_results_test[:, i-1]
+##    
+##    train['ica_' + str(i)] = ica2_results_train[:,i-1]
+##    test['ica_' + str(i)] = ica2_results_test[:, i-1]
+##    if i <= tsne_comp:
+##        train['tnse_' + str(i)] = tsne2_results_train[:,i-1]
+##        test['tnse_' + str(i)] = tsne2_results_test[:, i-1]
 
-# PCA
-pca = PCA(n_components=n_comp, random_state=42)
-pca2_results_train = pca.fit_transform(train.drop(["y",'ID'], axis=1))
-pca2_results_test = pca.transform(test.drop(["y",'ID'], axis=1))
-
-pca2 = PCA(n_components=100, random_state=42)
-temp_train = pca2.fit_transform(train.drop(["y",'ID'], axis=1))
-temp_test = pca2.transform(test.drop(["y",'ID'], axis=1))
-
-# ICA
-ica = FastICA(n_components=n_comp, random_state=42)
-ica2_results_train = ica.fit_transform(train.drop(["y",'ID'], axis=1))
-ica2_results_test = ica.transform(test.drop(["y",'ID'], axis=1))
-
-# TNSE
-from sklearn.manifold import TSNE
-tsne_comp=2
-tsne = TSNE(n_components=tsne_comp, random_state=42)
-tsne_all = tsne.fit_transform(total.drop(["y",'ID'], axis=1))
-tsne2_results_train = tsne_all[0:train_id]
-tsne2_results_test =  tsne_all[train_id:]
-
-
-
-
-# Append decomposition components to datasets
-for i in range(1, n_comp+1):
-    train['pca_' + str(i)] = pca2_results_train[:,i-1]
-    test['pca_' + str(i)] = pca2_results_test[:, i-1]
-    
-    train['ica_' + str(i)] = ica2_results_train[:,i-1]
-    test['ica_' + str(i)] = ica2_results_test[:, i-1]
-    if i <= tsne_comp:
-        train['tnse_' + str(i)] = tsne2_results_train[:,i-1]
-        test['tnse_' + str(i)] = tsne2_results_test[:, i-1]
-
-train.to_csv('train4.csv',index=0)
-test.to_csv('test4.csv',index=0)
+##train.to_csv('train4.csv',index=0)
+##test.to_csv('test4.csv',index=0)
 train=pd.read_csv('train4.csv')
 test=pd.read_csv('test4.csv')
 train = train.T.drop_duplicates().T
-predictors=[i for i in train.keys() if i not in ['ID','y']]
-test=train['predictors']
+predictors=[i for i in train.keys() if i not in ['y']]
+test=test[predictors]
 
 target='y'
 params = {}
 params["objective"] = "reg:linear"
-params["eta"] = 0.005
+params["eta"] = 0.1
 params["min_child_weight"] = 1
 params["subsample"] = 0.6
 params["colsample_bytree"] = 0.6
@@ -166,7 +166,26 @@ params['silent']=1
 from sklearn.metrics import r2_score
 def xgb_r2_score(preds, dtrain):
     labels = dtrain.get_label()
-    return 'r2', r2_score(labels, preds)
+    return 'r2', r2_score(labels, preds)+100
+def r2_customised(preds, dtrain): # reduces rmse of ( individal_r2 - mean_r2)^2
+    dtrain = dtrain.get_label()
+    dtrain=dtrain/100
+    preds=preds/100
+    SS_res = ( dtrain - preds )**2
+    SS_tot = ( dtrain - np.mean(dtrain))**2
+    SumSS_res =  np.sum(( dtrain - preds )**2)
+    SumSS_tot = np.sum(( dtrain - np.mean(dtrain))**2 )
+    #r2 = 1 - (SumSS_res/(SumSS_tot+0.0001))
+    preds =  1 - (SS_res/(SS_tot+0.0001))
+    grad = (preds - max(preds))*0.001
+    hess = grad*0+10
+    return grad, hess
+def logregobj(preds, dtrain):
+    labels = dtrain.get_label()
+    preds = 1.0 / (1.0 + np.exp(-preds))
+    grad = preds - labels
+    hess = preds * (1.0-preds)
+    return grad, hess
 params['eval_metric']='rmse'
 plst = list(params.items())
 dictt={}
@@ -177,8 +196,8 @@ for depth in [3,4,5,6]:
     plst = list(params.items())
     for num in range(0,5):
         train=train.sample(frac=1)
-        train['depth_PCA_'+str(depth)+'_'+str(num)]=0
-        test['depth_PCA_'+str(depth)+'_'+str(num)]=0
+        train['depth_AllCA_'+str(depth)+'_'+str(num)]=0
+        test['depth_AllCA_'+str(depth)+'_'+str(num)]=0
         max_n = 10
         for validation in range(0,max_n):
             dcv=train.iloc[validation::max_n]
@@ -189,11 +208,11 @@ for depth in [3,4,5,6]:
             xgtest = xgb.DMatrix(test[predictors])
             watchlist  = [ (xgtrain,'train'),(xgcv,'cv')]
             a={}
-            model=xgb.train(plst,xgtrain,10000,watchlist,early_stopping_rounds=500,evals_result=a,feval=xgb_r2_score, maximize=1,verbose_eval=False)
+            model=xgb.train(plst,xgtrain,10000,watchlist,obj=r2_customised,early_stopping_rounds=500,evals_result=a,feval=xgb_r2_score, maximize=1,verbose_eval=10)
             print a['train']['r2'][model.best_iteration],a['cv']['r2'][model.best_iteration],model.best_iteration
             model=xgb.train(plst,xgtrain,model.best_iteration,watchlist,early_stopping_rounds=500,evals_result=a,feval=xgb_r2_score, maximize=1,verbose_eval=False)
-            train=train.set_value(dcv.index,'depth_PCA_'+str(depth)+'_'+str(num),model.predict(xgcv))
-            test.set_value(test.index,'depth_PCA_'+str(depth)+'_'+str(num),test['depth_PCA_'+str(depth)+'_'+str(num)]+model.predict(xgtest)/max_n)
+            train=train.set_value(dcv.index,'depth_AllCA_'+str(depth)+'_'+str(num),model.predict(xgcv))
+            test.set_value(test.index,'depth_AllCA_'+str(depth)+'_'+str(num),test['depth_AllCA_'+str(depth)+'_'+str(num)]+model.predict(xgtest)/max_n)
             dictt[depth] += [a['cv']['r2'][model.best_iteration],]
         print '\n'
     print np.mean([float(x) for x in dictt[depth]]),np.std([float(x) for x in dictt[depth]])/len(dictt[depth])**.5
@@ -204,9 +223,9 @@ for i in dictt:
 #test[['ID','y']].to_csv('first.csv',index=0)
             
 predictors=[i for i in train.keys() if ('depth' in i) or i in ['ID','y']]
-train[predictors].to_csv('train_PCA.csv',index=0)
+train[predictors].to_csv('train_AllCA.csv',index=0)
 predictors=[i for i in test.keys() if ('depth' in i) or i in ['ID','y']]
-test[predictors].to_csv('test_PCA.csv',index=0)
+test[predictors].to_csv('test_AllCA.csv',index=0)
 '''
 0.5734342 0.00993828205311 3
 0.5816492 0.00993222393561 4
