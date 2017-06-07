@@ -188,7 +188,7 @@ from keras import backend as K
 def r2_keras(y_true, y_pred):
     SS_res =  K.sum(K.square( y_true - y_pred )) 
     SS_tot = K.sum(K.square( y_true - K.mean(y_true) ) ) 
-    return ( 1 - (SS_res/(SS_tot+0.0001)))
+    return ( 1 - (SS_res/(SS_tot+0.0001)))+100
 
 def r2_keras_array(y_true, y_pred):
     SS_res =  np.sum(( y_true - y_pred )**2) 
@@ -200,19 +200,10 @@ def r2_keras_array(y_true, y_pred):
 # In[6]:
 def mean_R2(y_true, y_pred):
     SS_res =  K.sum(K.square( y_true - y_pred )) 
-    SS_tot = K.sum(K.square( y_true - K.mean(y_true) ) ) 
-    return ( 1 - (SS_res/(SS_tot+0.0001)), axis=-1)
-    #return K.mean(K.square(y_pred - y_true), axis=-1)
+    SS_tot = K.sum(K.square( y_true - K.mean(y_true) ) )
+    return  (1 - (SS_res/(SS_tot+0.0001)))*-1
+    # keras minimises obj, here we try to minimise -R2 (maximise R2)
 
-
-def mean_absolute_error(y_true, y_pred):
-    return K.mean(K.abs(y_pred - y_true), axis=-1)
-
-
-def mean_absolute_percentage_error(y_true, y_pred):
-    diff = K.abs((y_true - y_pred) / K.clip(K.abs(y_true),
-                                            K.epsilon(),
-None))
 # base model architecture definition
 def model():
     model = Sequential()
@@ -243,7 +234,7 @@ def model():
     model.add(Dense(1, activation='linear'))
     
     # compile this model
-    model.compile(loss='mean_absolute_percentage_error', # one may use 'mean_absolute_error' as alternative
+    model.compile(loss=mean_R2, # one may use 'mean_absolute_error' as alternative
                   optimizer='adam',
                   metrics=[r2_keras] # you can add several if needed
                  )
@@ -304,7 +295,7 @@ model_path = 'keras_model.h5'
 callbacks = [
     EarlyStopping(
         monitor='val_loss', 
-        patience=10, # was 10
+        patience=1000, # was 10
         verbose=1),
     
     ModelCheckpoint(
@@ -325,7 +316,7 @@ def xgb_r2_score(preds, dtrain):
     return ( 1 - (SS_res/(SS_tot+0.0001)))
 ##def xgb_r2_score(preds, dtrain):
 ##    return r2_score(dtrain,y_true)
-name='predPer'
+name='keras_r2'
 for tries in range(0,10):
     max_n=5
     # X, y preparation
@@ -349,7 +340,7 @@ for tries in range(0,10):
         estimator.fit(
             X_tr, 
             y_tr, 
-            epochs=80, # increase it to 20-100 to get better results
+            epochs=50, # increase it to 20-100 to get better results
             validation_data=(X_val, y_val),
             verbose=2,
             callbacks=callbacks,
@@ -368,12 +359,12 @@ for tries in range(0,10):
             )
     train=train.merge(pred_train,on='ID')
     test=test.merge(pred_test,on='ID')
-    print xgb_r2_score(train['pred'+str(tries)],train.y)
+    print xgb_r2_score(train[name+str(tries)],train.y)
 train['ID']=train['ID'].astype(np.int32)
 test['ID']=test['ID'].astype(np.int32)
 predictors=[x for x in train.keys() if name in x]
-train[predictors+['ID','y',]].to_csv('train_keras_per.csv',index=0)    
-test[predictors+['ID',]].to_csv('test_keras_per.csv',index=0)
+train[predictors+['ID','y',]].to_csv('train_keras_r2.csv',index=0)    
+test[predictors+['ID',]].to_csv('test_keras_r2.csv',index=0)
 die
 
 # 
