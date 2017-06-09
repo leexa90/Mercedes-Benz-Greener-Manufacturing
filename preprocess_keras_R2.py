@@ -211,22 +211,22 @@ def model():
     model.add(Dense(input_dims, input_dim=input_dims))
     model.add(BatchNormalization())
     model.add(Activation('relu'))
-    model.add(Dropout(0.3))
+    model.add(Dropout(0.2))
     # hidden layers
     model.add(Dense(input_dims))
     model.add(BatchNormalization())
     model.add(Activation(act_func))
-    model.add(Dropout(0.3))
+    model.add(Dropout(0.2))
     
     model.add(Dense(input_dims//2))
     model.add(BatchNormalization())
     model.add(Activation(act_func))
-    model.add(Dropout(0.3))
+    model.add(Dropout(0.2))
     
     model.add(Dense(input_dims//5))
     model.add(BatchNormalization())
     model.add(Activation(act_func))
-    model.add(Dropout(0.3))
+    #model.add(Dropout(0.2))
     
     model.add(Dense(input_dims//10, activation=act_func))
     
@@ -250,7 +250,7 @@ def model():
 input_dims = train.shape[1]-2 #ID and y
 
 #activation functions for hidden layers
-act_func = 'tanh' # could be 'relu', 'sigmoid', ...
+act_func = 'relu' # could be 'relu', 'sigmoid', ...
 
 # make np.seed fixed
 np.random.seed(seed)
@@ -295,7 +295,7 @@ model_path = 'keras_model.h5'
 callbacks = [
     EarlyStopping(
         monitor='val_loss', 
-        patience=1000, # was 10
+        patience=10, # was 10
         verbose=1),
     
     ModelCheckpoint(
@@ -316,7 +316,7 @@ def xgb_r2_score(preds, dtrain):
     return ( 1 - (SS_res/(SS_tot+0.0001)))
 ##def xgb_r2_score(preds, dtrain):
 ##    return r2_score(dtrain,y_true)
-name='keras_r2'
+name='keras_r2b'
 for tries in range(0,10):
     max_n=5
     # X, y preparation
@@ -340,7 +340,7 @@ for tries in range(0,10):
         estimator.fit(
             X_tr, 
             y_tr, 
-            epochs=50, # increase it to 20-100 to get better results
+            epochs=42, # increase it to 20-100 to get better results
             validation_data=(X_val, y_val),
             verbose=2,
             callbacks=callbacks,
@@ -363,8 +363,8 @@ for tries in range(0,10):
 train['ID']=train['ID'].astype(np.int32)
 test['ID']=test['ID'].astype(np.int32)
 predictors=[x for x in train.keys() if name in x]
-train[predictors+['ID','y',]].to_csv('train_keras_r2.csv',index=0)    
-test[predictors+['ID',]].to_csv('test_keras_r2.csv',index=0)
+train[predictors+['ID','y',]].to_csv('train_keras_r2b.csv',index=0)    
+test[predictors+['ID',]].to_csv('test_keras_r2b.csv',index=0)
 die
 
 # 

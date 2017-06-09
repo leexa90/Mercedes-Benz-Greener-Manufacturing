@@ -50,8 +50,9 @@ seed = 42 # was 42
 # In[2]:
 
 # Read datasets
-train = pd.read_csv('train4.csv')
-test = pd.read_csv('test4.csv')
+train = pd.read_csv('train4b.csv')
+test = pd.read_csv('test4b.csv')
+train=train[train.y < 200]
 train = train.T.drop_duplicates().T
 predictors=[i for i in train.keys() if i not in ['y',]]
 test=test[predictors]
@@ -188,7 +189,7 @@ from keras import backend as K
 def r2_keras(y_true, y_pred):
     SS_res =  K.sum(K.square( y_true - y_pred )) 
     SS_tot = K.sum(K.square( y_true - K.mean(y_true) ) ) 
-    return ( 1 - (SS_res/(SS_tot+0.0001)))+100
+    return (1-(SS_res/(SS_tot+0.0001)))*-1+100
 
 def r2_keras_array(y_true, y_pred):
     SS_res =  np.sum(( y_true - y_pred )**2) 
@@ -303,13 +304,13 @@ model_path = 'keras_model.h5'
 # prepare callbacks
 callbacks = [
     EarlyStopping(
-        monitor='val_loss', 
-        patience=100, # was 10
+        monitor='val_r2_keras', 
+        patience=10, # was 10
         verbose=1),
     
     ModelCheckpoint(
         model_path, 
-        monitor='val_loss', 
+        monitor='val_r2_keras', 
         save_best_only=True, 
         verbose=0)
 ]
@@ -326,54 +327,62 @@ def xgb_r2_score(preds, dtrain):
 ##def xgb_r2_score(preds, dtrain):
 ##    return r2_score(dtrain,y_true)
 name='predPer'
-for tries in range(0,10):
-    max_n=5
-    # X, y preparation
-    train=train.sample(frac=1).reset_index(drop=1)
-    predictors = [x for x in train.keys() if name not in x]
-    X, y = train[predictors].drop(['ID','y'], axis=1).values, train.y.values
-    print(X.shape)
-    # X_test preparation
-    X_test = test
-    X_te = test[predictors].drop(['ID','y'], axis=1).values
-    print(X_test.shape)
-    pred_train=train[['ID']].copy()
-    pred_test=test[['ID']].copy()
-    pred_train[name+str(tries)]=0
-    pred_test[name+str(tries)]=0
-    for validation in range(0,max_n):
-        dtrain_index= [ i for i in range(len(train)) if i%max_n != validation]
-        X_tr, X_val = X[dtrain_index],X[validation::max_n]
-        y_tr, y_val = y[dtrain_index],y[validation::max_n]
+for i in ['relu','tanh','sigmoid']:
+    act_func = i # could be 'relu', 'sigmoid', ...
+    name='keras_per_'+act_func
+    for tries in range(0,30):
+        max_n=3
+        # X, y preparation
+        train=train.sample(frac=1).reset_index(drop=1)
+        #new_index=train['y'].apply(lambda x : int(x/5)*5).sort_values().index #stable sorted acording to fives
+        #train=train.iloc[new_index].reset_index(drop=1)
+        predictors = [x for x in train.keys() if name[0:5] not in x]
+        X, y = train[predictors].drop(['ID','y'], axis=1).values, train.y.values
+        print(X.shape)
         
-        estimator.fit(
-            X_tr, 
-            y_tr, 
-            epochs=42, # increase it to 20-100 to get better results
-            validation_data=(X_val, y_val),
-            verbose=0,
-            callbacks=callbacks,
-            shuffle=True
-        )
-        temp=pred_train.set_value(
-            range(validation,len(train)
-                  ,max_n),
-            name+str(tries),
-            estimator.predict(X_val,verbose=0)
+        # X_test preparation
+        X_test = test
+        X_te = test[predictors].drop(['ID','y'], axis=1).values
+        print(X_test.shape)
+        pred_train=train[['ID']].copy()
+        pred_test=test[['ID']].copy()
+        pred_train[name+str(tries)]=0
+        pred_test[name+str(tries)]=0
+        for validation in range(0,max_n):
+            dtrain_index= [ i for i in range(len(train)) if i%max_n != validation]
+            X_tr, X_val = X[dtrain_index],X[validation::max_n]
+            y_tr, y_val = y[dtrain_index],y[validation::max_n]
+            
+            estimator.fit(
+                X_tr, 
+                y_tr, 
+                epochs=18, # increase it to 20-100 to get better results
+                validation_data=(X_val, y_val),
+                verbose=2,
+                callbacks=callbacks,
+                shuffle=True
             )
-        temp=pred_test.set_value(
-            test.index,
-            name+str(tries),
-            pred_test[name+str(tries)]+estimator.predict(X_te,verbose=0)/max_n
-            )
-    train=train.merge(pred_train,on='ID')
-    test=test.merge(pred_test,on='ID')
-    print xgb_r2_score(train[name+str(tries)],train.y)
-train['ID']=train['ID'].astype(np.int32)
-test['ID']=test['ID'].astype(np.int32)
-predictors=[x for x in train.keys() if name in x]
-train[predictors+['ID','y',]].to_csv('train_keras_per.csv',index=0)    
-test[predictors+['ID',]].to_csv('test_keras_per.csv',index=0)
+            temp=pred_train.set_value(
+                range(validation,len(train)
+                      ,max_n),
+                name+str(tries),
+                estimator.predict(X_val,verbose=0)
+                )
+            temp=pred_test.set_value(
+                test.index,
+                name+str(tries),
+                pred_test[name+str(tries)]+estimator.predict(X_te,verbose=0)/max_n
+                )
+        train=train.merge(pred_train,on='ID')
+        test=test.merge(pred_test,on='ID')
+        print xgb_r2_score(train[name+str(tries)],train.y)
+    train['ID']=train['ID'].astype(np.int32)
+    test['ID']=test['ID'].astype(np.int32)
+    predictors=[x for x in train.keys() if name[0:5] in x]
+    train[predictors+['ID','y',]].to_csv('train_%s.csv' %name,index=0)    
+    test[predictors+['ID',]].to_csv('test_%s.csv'%name,index=0)
+die
+
 die
 
 # 

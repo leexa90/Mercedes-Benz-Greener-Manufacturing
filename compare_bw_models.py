@@ -2,9 +2,9 @@ import pandas as pd
 import numpy as np
 
 depth =pd.read_csv('train_depth.csv')
-poisson = pd.read_csv('train_poisson.csv')
+#poisson = pd.read_csv('train_poisson.csv')
 keras = pd.read_csv('train_keras.csv')
-lasso = pd.read_csv('train_lasso.csv')
+#lasso = pd.read_csv('train_lasso.csv')
 from sklearn.metrics import r2_score
 def xgb_r2_score(preds, dtrain):
     labels = dtrain
@@ -44,12 +44,53 @@ if find_combined:
         print i, xgb_r2_score(lasso[i],lasso.y.values)
     pred = [x for x in keras.keys() if 'pred' in x]
     keras['all']=map(lambda x :np.mean(x), np.array(keras[pred]))
-train = pd.read_csv('train4.csv')
-test = pd.read_csv('test4.csv')
-for i in [depth,poisson,lasso,keras]:
-    train= pd.merge(train,i,on=['ID','y'])
-    test= pd.merge(train,i,on=['ID','y'])
+train = pd.read_csv('train4b.csv')
+test = pd.read_csv('test4b.csv')
+predictors=[x for x in test.keys() if x != 'ID']
+import os 
+lst_tr =[ x for x in os.listdir('.') if 'train_' in x]
+lst_ts =[ x for x in os.listdir('.') if 'test_' in x]
 
+
+
+for i in lst_tr:
+    try:
+        train= pd.merge(train,pd.read_csv(i),on=['ID','y'])
+    except KeyError:
+        train= pd.merge(train,pd.read_csv(i),on=['ID'])
+    temp = pd.read_csv('test'+i[5:])
+    temp.ID =temp['ID'].astype(np.int32)
+    test= pd.merge(test,temp,on=['ID'])
+    print len(test),i
+    
+train=train[[x for x in train.keys() if x not in predictors]+['y',]]
+test=test[[x for x in test.keys() if x not in predictors]]
+train.to_csv('trainLvl2a.csv',index=0)
+test.to_csv('testLvl2a.csv',index=0)
+tempTr = train[['ID','y']].copy()
+tempTs = test[['ID',]].copy()
+
+for i in list(set([x[0:-1] for x in train.keys() if x!='y'])):
+    pred = [x for x in train.keys() if i == x[0:-1]]
+    print pred
+    
+    tempTr[i] = map(lambda x :np.mean(x), np.array(train[pred]))
+    if 'y' not in pred :
+        tempTs[i] = map(lambda x :np.mean(x), np.array(test[pred]))
+
+pred =list(set([ x[0:-1] for  x in train.keys() if ('ridge' not in x) and (x!='y' ) and ('depth' not in x)]))
+pred += ['ridge_20.0_', 'ridge_25.0_','ridge_30.0_', \
+          'ridge_35.0_', 'ridge_40.0_']
+tempTr['all'] = map(lambda x :np.mean(x), np.array(tempTr[pred]))
+tempTs['all'] = map(lambda x :np.mean(x), np.array(tempTs[pred]))
+good=[]
+for i in pred:
+    print i,xgb_r2_score(tempTr[i],tempTr.y)
+    if xgb_r2_score(tempTr[i],tempTr.y)[1] > 0.55:
+        good += [i,]
+corr=tempTr[good].corr()
+tempTr.to_csv('trainLvl2b.csv',index=0)
+tempTs.to_csv('testLvl2b.csv',index=0)
 '''
 # depth rmse
 3 ('r2', 0.57237382209669785)
@@ -90,4 +131,16 @@ all ('r2', 0.56124984205926287)
 0.3 ('r2', 0.51111365408503606)
 0.5 ('r2', 0.49635561514626569)
 1 ('r2', 0.44715340226893341)
+Keras r2
+('r2', 0.54588807312863863)
+('r2', 0.54621032490195121)
+('r2', 0.54948153334482575)
+('r2', 0.55242404310426507)
+('r2', 0.53980315086615882)
+('r2', 0.54097778607198022)
+('r2', 0.53347675595832889)
+('r2', 0.54728143326427281)
+('r2', 0.54714566707914503)
+('r2', 0.54636873409121822)
+all ('r2', 0.55542708216764847)
 '''

@@ -50,8 +50,9 @@ seed = 42 # was 42
 # In[2]:
 
 # Read datasets
-train = pd.read_csv('train4.csv')
-test = pd.read_csv('test4.csv')
+train = pd.read_csv('train4b.csv')
+train=train[train.y < 200]
+test = pd.read_csv('test4b.csv')
 train = train.T.drop_duplicates().T
 predictors=[i for i in train.keys() if i not in ['y',]]
 test=test[predictors]

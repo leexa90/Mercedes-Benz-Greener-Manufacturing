@@ -1,0 +1,9 @@
+python preprocess_keras_MAE_lgy.py  > preprocess_keras_MAE_lgy.log 
+python preprocess_keras_MAE2.py > preprocess_keras_MAE2.log
+python preprocess_keras_MSE2.py > preprocess_keras_MSE2.log
+python preprocess_keras_MSE2_r2.py > preprocess_keras_MSE2_r2.log
+python preprocess_keras_percentloss.py > preprocess_keras_percentloss.log
+python preprocess_xgb_mse_sqry.py  > preprocess_xgb_mse_sqry.log
+ 
+
+

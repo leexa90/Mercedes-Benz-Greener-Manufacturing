@@ -149,8 +149,9 @@ def xgb_r2_score(preds, dtrain):
     labels = dtrain
     return 'r2', r2_score(labels, preds)
 
-train=pd.read_csv('train4.csv')
-test=pd.read_csv('test4.csv')
+train=pd.read_csv('train4b.csv')
+test=pd.read_csv('test4b.csv')
+train=train[train.y < 200]
 train = train.T.drop_duplicates().T
 predictors=[i for i in train.keys() if i not in ['y']]
 test=test[predictors]
@@ -158,7 +159,7 @@ from sklearn import linear_model
 max_n = 10
 dictt={}
 name='ridge'
-for alpha in [0.01,0.05,0.1,0.3,0.5,0.7,1,1.5,2,2.5,3,4,5,7,10,12.5,15,17.5,20,25,30,35,40,45,50,60,70,80,90,100,110][5:55]:
+for alpha in [10,20,30,40,50]:
     alpha=alpha*1.0
     for repeat in range(0,10):
         train[name+'_'+str(alpha)+'_'+str(repeat)]=0
@@ -193,9 +194,11 @@ for alpha in [0.01,0.05,0.1,0.3,0.5,0.7,1,1.5,2,2.5,3,4,5,7,10,12.5,15,17.5,20,2
     dictt[alpha]=xgb_r2_score(train[alpha],train.y.values)[1]
     del train[alpha]
     print '\n'
-pred = [x for x in train.keys() if 'ridge' in x]
+pred = [x for x in train.keys() if name in x]
+train['ID']=train['ID'].astype(np.int32)
+test['ID']=test['ID'].astype(np.int32)
 train[pred+['ID','y']].to_csv('train_ridge.csv',index=0)
-train[pred+['ID']].to_csv('test_ridge.csv',index=0)
+test[pred+['ID']].to_csv('test_ridge.csv',index=0)
 
 x,y =[],[]
 for i in dictt:

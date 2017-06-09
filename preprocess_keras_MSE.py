@@ -311,12 +311,12 @@ def xgb_r2_score(preds, dtrain):
     return ( 1 - (SS_res/(SS_tot+0.0001)))
 ##def xgb_r2_score(preds, dtrain):
 ##    return r2_score(dtrain,y_true)
-
+name='keras_MSE'
 for tries in range(0,10):
     max_n=5
     # X, y preparation
     train=train.sample(frac=1).reset_index(drop=1)
-    predictors = [x for x in train.keys() if 'pred' not in x]
+    predictors = [x for x in train.keys() if name not in x]
     X, y = train[predictors].drop(['ID','y'], axis=1).values, train.y.values
     print(X.shape)
     
@@ -326,8 +326,8 @@ for tries in range(0,10):
     print(X_test.shape)
     pred_train=train[['ID']].copy()
     pred_test=test[['ID']].copy()
-    pred_train['pred'+str(tries)]=0
-    pred_test['pred'+str(tries)]=0
+    pred_train[name+str(tries)]=0
+    pred_test[name+str(tries)]=0
     for validation in range(0,max_n):
         dtrain_index= [ i for i in range(len(train)) if i%max_n != validation]
         X_tr, X_val = X[dtrain_index],X[validation::max_n]
@@ -345,20 +345,20 @@ for tries in range(0,10):
         temp=pred_train.set_value(
             range(validation,len(train)
                   ,max_n),
-            'pred'+str(tries),
+            name+str(tries),
             estimator.predict(X_val,verbose=0)
             )
         temp=pred_test.set_value(
             test.index,
-            'pred'+str(tries),
-            pred_test['pred'+str(tries)]+estimator.predict(X_te,verbose=0)/max_n
+            name+str(tries),
+            pred_test[name+str(tries)]+estimator.predict(X_te,verbose=0)/max_n
             )
     train=train.merge(pred_train,on='ID')
     test=test.merge(pred_test,on='ID')
-    print xgb_r2_score(train['pred'+str(tries)],train.y)
+    print xgb_r2_score(train[name+str(tries)],train.y)
 train['ID']=train['ID'].astype(np.int32)
 test['ID']=test['ID'].astype(np.int32)
-predictors=[x for x in train.keys() if 'pred' in x]
+predictors=[x for x in train.keys() if name in x]
 train[predictors+['ID','y',]].to_csv('train_keras.csv',index=0)    
 test[predictors+['ID',]].to_csv('test_keras.csv',index=0)
 die
