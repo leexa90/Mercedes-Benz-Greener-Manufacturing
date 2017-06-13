@@ -1,10 +1,10 @@
 import pandas as pd
 import numpy as np
 import xgboost as xgb
-train=pd.read_csv('trainLvl2.csv')
-test=pd.read_csv('testLvl2.csv')
+train=pd.read_csv('trainLvl2b.csv')
+test=pd.read_csv('testLvl2b.csv')
 train = train.T.drop_duplicates().T
-predictors=[i for i in train.keys() if i not in ['y']]
+predictors=[i for i in train.keys() if i not in ['y','ID']]
 test=test[predictors]
 
 target='y'
@@ -47,19 +47,33 @@ def logregobj(preds, dtrain):
     grad = preds - labels
     hess = preds * (1.0-preds)
     return grad, hess
-params['eval_metric']='rmse'
-plst = list(params.items())
 dictt={}
-for depth in [3,4,5,6]:
+for depth in [3,6,9]:
+    name='L2_predict_'
     print depth
     dictt[depth]=[]
     params["max_depth"] = depth
     plst = list(params.items())
-    for num in range(0,5):
+    rounds=0
+    for num in range(0,10):
         train=train.sample(frac=1)
-        train['depth_AllCA_'+str(depth)+'_'+str(num)]=0
-        test['depth_AllCA_'+str(depth)+'_'+str(num)]=0
-        max_n = 10
+        train[name+str(depth)+'_'+str(num)]=0
+        test[name+str(depth)+'_'+str(num)]=0
+        max_n = 5
+        if rounds ==0:
+            for validation in range(0,max_n):
+                dcv=train.iloc[validation::max_n]
+                dtrain_index= [ i for i in range(len(train)) if i%max_n != validation]
+                dtrain=train.iloc[dtrain_index]
+                xgtrain = xgb.DMatrix(dtrain[predictors], label=dtrain[target])
+                xgcv = xgb.DMatrix(dcv[predictors], label=dcv[target])
+                xgtest = xgb.DMatrix(test[predictors])
+                watchlist  = [ (xgtrain,'train'),(xgcv,'cv')]
+                a={}
+                model=xgb.train(plst,xgtrain,8000,watchlist,early_stopping_rounds=500,evals_result=a,feval=xgb_r2_score, maximize=1,verbose_eval=False)
+                print a['train']['r2'][model.best_iteration],a['cv']['r2'][model.best_iteration],model.best_iteration
+                rounds+=model.best_iteration/max_n
+                print rounds
         for validation in range(0,max_n):
             dcv=train.iloc[validation::max_n]
             dtrain_index= [ i for i in range(len(train)) if i%max_n != validation]
@@ -69,28 +83,52 @@ for depth in [3,4,5,6]:
             xgtest = xgb.DMatrix(test[predictors])
             watchlist  = [ (xgtrain,'train'),(xgcv,'cv')]
             a={}
-            model=xgb.train(plst,xgtrain,700,watchlist,early_stopping_rounds=5000,evals_result=a,feval=xgb_r2_score, maximize=1,verbose_eval=False)
-            print a['train']['r2'][model.best_iteration],a['cv']['r2'][model.best_iteration],model.best_iteration
-            model=xgb.train(plst,xgtrain,model.best_iteration,watchlist,early_stopping_rounds=500,evals_result=a,feval=xgb_r2_score, maximize=1,verbose_eval=False)
-            train=train.set_value(dcv.index,'depth_AllCA_'+str(depth)+'_'+str(num),model.predict(xgcv))
-            test.set_value(test.index,'depth_AllCA_'+str(depth)+'_'+str(num),test['depth_AllCA_'+str(depth)+'_'+str(num)]+model.predict(xgtest)/max_n)
+            model=xgb.train(plst,xgtrain,int(rounds),watchlist,early_stopping_rounds=5000000,evals_result=a,feval=xgb_r2_score, maximize=1,verbose_eval=False)
+            train=train.set_value(dcv.index,name+str(depth)+'_'+str(num),model.predict(xgcv))
+            test.set_value(test.index,name+str(depth)+'_'+str(num),test[name+str(depth)+'_'+str(num)]+model.predict(xgtest)/max_n)
             dictt[depth] += [a['cv']['r2'][model.best_iteration],]
+        print r2_score(train.y,train[name+str(depth)+'_'+str(num)])
         print '\n'
-    print np.mean([float(x) for x in dictt[depth]]),np.std([float(x) for x in dictt[depth]])/len(dictt[depth])**.5
-for i in dictt:
-	print np.mean([float(x) for x in dictt[i]]),np.std([float(x) for x in dictt[i]])/len(dictt[depth])**.5
-
+ 
 #test['y']=map(lambda x:np.mean(x),np.array(test[['depth_4_0' ,  'depth_4_1',   'depth_4_2','depth_4_3','depth_4_4']]))
 #test[['ID','y']].to_csv('first.csv',index=0)
-            
-predictors=[i for i in train.keys() if ('depth' in i) or i in ['ID','y']]
-train[predictors].to_csv('train_AllCA.csv',index=0)
-predictors=[i for i in test.keys() if ('depth' in i) or i in ['ID','y']]
-test[predictors].to_csv('test_AllCA.csv',index=0)
+             
+predictors=[i for i in train.keys() if (name[0:5] in i) or i in ['ID','y']]
+train[predictors].to_csv('train_%s.csv' %name,index=0)
+predictors=[i for i in test.keys() if (name[0:5] in i) or i in ['ID','y']]
+test[predictors].to_csv('test_%s.csv' %name,index=0)
 '''
-0.5734342 0.00993828205311 3
-0.5816492 0.00993222393561 4
-0.579851 0.00999689565915 5
-0.5632972 0.0184149400565 6
-0.5734342 0.00993828205311 7
+gblinear3_ ('r2', 0.56455627384897611)
+gblinear4_ ('r2', 0.56231826068569757)
+gblinear5_ ('r2', 0.56646811125111962)
+gblinear6_ ('r2', 0.56520535013907325)
+keras_MAE2_lgY_relu ('r2', 0.5647133768384911)
+keras_MAE2_relu ('r2', 0.55966247078466769)
+keras_MSE2_relu ('r2', 0.576911022072226)
+keras_MSE2_tanh ('r2', 0.5733064301468066)
+keras_per_relu ('r2', 0.53998518411222873)
+keras_r2_relu ('r2', 0.57500453624382097)
+keras_r2b ('r2', 0.5559808314247574)
+lasso_0.01_ ('r2', 0.58710550646571935)
+lasso_0.05_ ('r2', 0.58226933556598615)
+lasso_0.1_ ('r2', 0.56575506771932371)
+lasso_0.3_ ('r2', 0.5341519399327439)
+lasso_0.5_ ('r2', 0.52153174213969611)
+predM ('r2', 0.55879111198961096)
+predPer ('r2', 0.55203360792319711)
+ridge_20.0_ ('r2', 0.58285984350427489)
+ridge_30.0_ ('r2', 0.58377114148993614)
+ridge_40.0_ ('r2', 0.58293085837611347)
+xMSE23_ ('r2', 0.59249262263799585)
+xMSE24_ ('r2', 0.59037845984396675)
+xMSE25_ ('r2', 0.58824823076052313)
+xMSE26_ ('r2', 0.58709960214826706)
+x_mse_expY3_ ('r2', 0.53331470967750472)
+x_mse_expY4_ ('r2', 0.54486893057182062)
+x_mse_expY5_ ('r2', 0.55097506057227186)
+x_mse_expY6_ ('r2', 0.55219303912264595)
+x_mse_sqrY3_ ('r2', 0.59350046182740512)
+x_mse_sqrY4_ ('r2', 0.59180121656851892)
+x_mse_sqrY5_ ('r2', 0.59014810148350549)
+x_mse_sqrY6_ ('r2', 0.58837503020650317)
 '''

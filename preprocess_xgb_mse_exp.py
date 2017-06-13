@@ -100,7 +100,7 @@ for i in dictt:
 
 #test['y']=map(lambda x:np.mean(x),np.array(test[['depth_4_0' ,  'depth_4_1',   'depth_4_2','depth_4_3','depth_4_4']]))
 #test[['ID','y']].to_csv('first.csv',index=0)
-train['y']=10**(train['y'])         
+train['y']=(train['y']) **2       
 predictors=[i for i in train.keys() if (name[0:5] in i) or i in ['ID','y']]
 train[predictors].to_csv('train_xgmse_expy.csv',index=0)
 predictors=[i for i in test.keys() if (name[0:5] in i) or i in ['ID','y']]

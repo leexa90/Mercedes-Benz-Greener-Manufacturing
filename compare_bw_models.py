@@ -55,13 +55,19 @@ lst_ts =[ x for x in os.listdir('.') if 'test_' in x]
 
 for i in lst_tr:
     try:
-        train= pd.merge(train,pd.read_csv(i),on=['ID','y'])
+        temp = pd.read_csv(i)
+        temp.ID =temp['ID'].astype(np.int32)
+        if 'y' not in temp or np.mean(temp.y) > 60000 :
+            temp['y']=0 #dummy,
+            train= pd.merge(train,temp.drop('y',axis=1),on=['ID'])
+        else:
+            train = pd.merge(train,temp,on=['ID','y'])
     except KeyError:
         train= pd.merge(train,pd.read_csv(i),on=['ID'])
     temp = pd.read_csv('test'+i[5:])
     temp.ID =temp['ID'].astype(np.int32)
     test= pd.merge(test,temp,on=['ID'])
-    print len(test),i
+    print len(test),len(train),i
     
 train=train[[x for x in train.keys() if x not in predictors]+['y',]]
 test=test[[x for x in test.keys() if x not in predictors]]
@@ -70,27 +76,29 @@ test.to_csv('testLvl2a.csv',index=0)
 tempTr = train[['ID','y']].copy()
 tempTs = test[['ID',]].copy()
 
-for i in list(set([x[0:-1] for x in train.keys() if x!='y'])):
-    pred = [x for x in train.keys() if i == x[0:-1]]
-    print pred
+for i in list(set([x[0:-1] for x in train.keys() if x!='y' and x[-2].isdigit() is False])):
+    pred = [x for x in train.keys() if i == x[0:-1] or i == x[0:-2]]
+    print pred 
     
     tempTr[i] = map(lambda x :np.mean(x), np.array(train[pred]))
     if 'y' not in pred :
         tempTs[i] = map(lambda x :np.mean(x), np.array(test[pred]))
 
-pred =list(set([ x[0:-1] for  x in train.keys() if ('ridge' not in x) and (x!='y' ) and ('depth' not in x)]))
-pred += ['ridge_20.0_', 'ridge_25.0_','ridge_30.0_', \
-          'ridge_35.0_', 'ridge_40.0_']
+pred =list(set([ x for  x in tempTr.keys() if  x not in ['ID','y'] and 'ridge' not in x and 'depth' not in x]))
+pred += ['ridge_20.0_','ridge_30.0_', 'ridge_40.0_']
 tempTr['all'] = map(lambda x :np.mean(x), np.array(tempTr[pred]))
 tempTs['all'] = map(lambda x :np.mean(x), np.array(tempTs[pred]))
 good=[]
-for i in pred:
+for i in sorted(pred):
     print i,xgb_r2_score(tempTr[i],tempTr.y)
-    if xgb_r2_score(tempTr[i],tempTr.y)[1] > 0.55:
+    if xgb_r2_score(tempTr[i],tempTr.y)[1] > 0.54:
+    #    print i,xgb_r2_score(tempTr[i],tempTr.y)
         good += [i,]
 corr=tempTr[good].corr()
-tempTr.to_csv('trainLvl2b.csv',index=0)
-tempTs.to_csv('testLvl2b.csv',index=0)
+tempTr['all'] = map(lambda x :np.mean(x), np.array(tempTr[good]))
+tempTs['all'] = map(lambda x :np.mean(x), np.array(tempTs[good]))
+tempTr[pred+['y','ID']].to_csv('trainLvl2b.csv',index=0)
+tempTs[pred+['ID']].to_csv('testLvl2b.csv',index=0)
 '''
 # depth rmse
 3 ('r2', 0.57237382209669785)

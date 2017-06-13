@@ -246,6 +246,7 @@ def xgb_r2_score(preds, dtrain):
 for i in ['relu','tanh','sigmoid']:
     act_func = i # could be 'relu', 'sigmoid', ...
     name='keras_r2_'+act_func
+    rounds =0
     for tries in range(0,30):
         max_n=3
         # X, y preparation
@@ -255,40 +256,55 @@ for i in ['relu','tanh','sigmoid']:
         predictors = [x for x in train.keys() if name[0:5] not in x]
         X, y = train[predictors].drop(['ID','y'], axis=1).values, train.y.values
         print(X.shape)
-        
         # X_test preparation
         X_test = test
         X_te = test[predictors].drop(['ID','y'], axis=1).values
         print(X_test.shape)
         pred_train=train[['ID']].copy()
         pred_test=test[['ID']].copy()
-        pred_train[name+str(tries)]=0
-        pred_test[name+str(tries)]=0
-        for validation in range(0,max_n):
-            dtrain_index= [ i for i in range(len(train)) if i%max_n != validation]
-            X_tr, X_val = X[dtrain_index],X[validation::max_n]
-            y_tr, y_val = y[dtrain_index],y[validation::max_n]
-            
-            estimator.fit(
-                X_tr, 
-                y_tr, 
-                epochs=18, # increase it to 20-100 to get better results
-                validation_data=(X_val, y_val),
-                verbose=2,
-                callbacks=callbacks,
-                shuffle=True
-            )
-            temp=pred_train.set_value(
-                range(validation,len(train)
-                      ,max_n),
-                name+str(tries),
-                estimator.predict(X_val,verbose=0)
+        if rounds ==0 or tries ==1:
+            for validation in range(0,max_n):
+                dtrain_index= [ i for i in range(len(train)) if i%max_n != validation]
+                X_tr, X_val = X[dtrain_index],X[validation::max_n]
+                y_tr, y_val = y[dtrain_index],y[validation::max_n]          
+                hist=estimator.fit(
+                    X_tr, 
+                    y_tr, 
+                    epochs=80, # increase it to 20-100 to get better results
+                    validation_data=(X_val, y_val),
+                    verbose=2,
+                    callbacks=callbacks,
+                    shuffle=True
                 )
-            temp=pred_test.set_value(
-                test.index,
-                name+str(tries),
-                pred_test[name+str(tries)]+estimator.predict(X_te,verbose=0)/max_n
+                rounds += 0.5*(len(hist.history['loss'])-10)/max_n
+                print rounds
+        elif tries >=1:
+            pred_train[name+str(tries)]=0
+            pred_test[name+str(tries)]=0
+            for validation in range(0,max_n):
+                dtrain_index= [ i for i in range(len(train)) if i%max_n != validation]
+                X_tr, X_val = X[dtrain_index],X[validation::max_n]
+                y_tr, y_val = y[dtrain_index],y[validation::max_n]          
+                hist=estimator.fit(
+                    X_tr, 
+                    y_tr, 
+                    epochs=int(rounds), # increase it to 20-100 to get better results
+                    validation_data=(X_val, y_val),
+                    verbose=2,
+                    shuffle=True
                 )
+                rounds = len(hist.history['loss'])-10
+                temp=pred_train.set_value(
+                    range(validation,len(train)
+                          ,max_n),
+                    name+str(tries),
+                    estimator.predict(X_val,verbose=0)
+                    )
+                temp=pred_test.set_value(
+                    test.index,
+                    name+str(tries),
+                    pred_test[name+str(tries)]+estimator.predict(X_te,verbose=0)/max_n
+                    )
         train=train.merge(pred_train,on='ID')
         test=test.merge(pred_test,on='ID')
         print xgb_r2_score(train[name+str(tries)],train.y)
@@ -296,8 +312,7 @@ for i in ['relu','tanh','sigmoid']:
     test['ID']=test['ID'].astype(np.int32)
     predictors=[x for x in train.keys() if name[0:5] in x]
     train[predictors+['ID','y',]].to_csv('train_%s.csv' %name,index=0)    
-    test[predictors+['ID',]].to_csv('test_%s.csv'%name,index=0)
-die
+    test[predictors+['ID',]].to_csv('test_%s.csv'%name,index=0)die
 
 # 
 
