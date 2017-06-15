@@ -40,7 +40,7 @@ from sklearn.metrics import r2_score, mean_squared_error
 from sklearn.ensemble import GradientBoostingRegressor
 # feature selection (from supportive model)
 from sklearn.feature_selection import SelectFromModel
-
+from keras import backend as K
 # to make results reproducible
 seed = 42 # was 42
 
@@ -76,7 +76,7 @@ def sqr(y):return y**.5
 def inv_sqr(y):return y**2
 
 def exp(y):return 1.05**y
-def inv_exp(y):return np.log(y)/np.log(1.05)
+def inv_exp(y):return K.log(y)/K.log(1.05)
 
 dictt = {(None,None):'None',
          (lg,inv_lg) : 'lg',
@@ -111,15 +111,15 @@ Outputs 29 * 3 predicted values for both train and test set
 '''
 ## MSE ###
 for act_func in ['relu','tanh','sigmoid'][:]:
-    for objective in [(None,None),(lg,inv_lg),(sqr,inv_sqr),(exp,inv_exp)]:
-        name='keras_MSE2_%s_%s'%(dictt[objective],act_func)
+    for objective in [(None,None),(lg,inv_lg),(sqr,inv_sqr),(exp,inv_exp)][:-1]:
+        name='keras_MSE3_%s_%s'%(dictt[objective],act_func)
         if 'test_%s.csv'%name not in [x for x in os.listdir('.') ] and \
            'train_%s.csv'%name not in [x for x in os.listdir('.') ]:
             rounds =0
-            train2,test2,predictors = model_XA('train4b.csv','test4b.csv',name,act_func=act_func,\
+            train2,test2,predictors = model_XA('train4c.csv','test4c.csv',name,act_func=act_func,\
                                                loss='mean_squared_error',Y_transform=objective[0],Y_invtransform=objective[1]\
                                                ,seed=0)
-            train3,test3,predictors = model_XA('train4b.csv','test4b.csv',name,act_func=act_func,\
+            train3,test3,predictors = model_XA('train4c.csv','test4c.csv',name,act_func=act_func,\
                                                loss='mean_squared_error',Y_transform=objective[0],Y_invtransform=objective[1]\
                                                ,seed=20)
             train2 = train2.merge(train3,on=['ID','y'])
@@ -133,10 +133,10 @@ for act_func in ['relu','tanh','sigmoid'][:]:
             quit()
         else:
             print name
-
+die
 ### MAE ###
 for act_func in ['relu','tanh','sigmoid'][:]:
-    for objective in [(None,None),(lg,inv_lg),(sqr,inv_sqr),(exp,inv_exp)]:
+    for objective in [(None,None),(lg,inv_lg),(sqr,inv_sqr),(exp,inv_exp)][:-1]:
         name='keras_MAE2_%s_%s'%(dictt[objective],act_func)
         if 'test_%s.csv'%name not in [x for x in os.listdir('.') ] and \
            'train_%s.csv'%name not in [x for x in os.listdir('.') ]:
@@ -160,7 +160,7 @@ for act_func in ['relu','tanh','sigmoid'][:]:
             print name
 ### R2 ###
 for act_func in ['relu','tanh','sigmoid'][:]:
-    for objective in [(None,None),(lg,inv_lg),(sqr,inv_sqr),(exp,inv_exp)]:
+    for objective in [(None,None),(lg,inv_lg),(sqr,inv_sqr),(exp,inv_exp)][:-1]:
         name='keras_MSE2_%s_%s'%(dictt[objective],act_func)
         if 'test_%s.csv'%name not in [x for x in os.listdir('.') ] and \
            'train_%s.csv'%name not in [x for x in os.listdir('.') ]:

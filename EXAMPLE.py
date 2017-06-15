@@ -298,6 +298,8 @@ def model_XA(train_n='train4b.csv',test_n='test4b.csv',name='test',act_func='rel
 ##        train[predictors]=train[predictors].applymap(log_105)
     if Y_transform != None:
         train['y'] = Y_invtransform(train['y'])
+        for i in predictors:
+            train[i]=Y_invtransform(train[i])
     return train[predictors+['ID','y']],test[predictors+['ID',]],predictors
 
 

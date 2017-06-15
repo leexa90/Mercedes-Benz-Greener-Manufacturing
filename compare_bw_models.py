@@ -61,7 +61,7 @@ for i in lst_tr:
             temp['y']=0 #dummy,
             train= pd.merge(train,temp.drop('y',axis=1),on=['ID'])
         else:
-            train = pd.merge(train,temp,on=['ID','y'])
+            train = pd.merge(train,temp.drop('y',axis=1),on=['ID'])
     except KeyError:
         train= pd.merge(train,pd.read_csv(i),on=['ID'])
     temp = pd.read_csv('test'+i[5:])
@@ -78,9 +78,12 @@ tempTs = test[['ID',]].copy()
 
 for i in list(set([x[0:-1] for x in train.keys() if x!='y' and x[-2].isdigit() is False])):
     pred = [x for x in train.keys() if i == x[0:-1] or i == x[0:-2]]
-    print pred 
-    
+    print pred     
     tempTr[i] = map(lambda x :np.mean(x), np.array(train[pred]))
+    if i == 'keras_MSE2_lg_relu':
+        tempTr[i] = 10**tempTr[i]
+    if i == 'keras_MSE2_sqr_relu':
+        tempTr[i] = tempTr[i]**2
     if 'y' not in pred :
         tempTs[i] = map(lambda x :np.mean(x), np.array(test[pred]))
 
@@ -94,7 +97,7 @@ for i in sorted(pred):
     if xgb_r2_score(tempTr[i],tempTr.y)[1] > 0.54:
     #    print i,xgb_r2_score(tempTr[i],tempTr.y)
         good += [i,]
-corr=tempTr[good].corr()
+corr=tempTr[good+['y']].corr()
 tempTr['all'] = map(lambda x :np.mean(x), np.array(tempTr[good]))
 tempTs['all'] = map(lambda x :np.mean(x), np.array(tempTs[good]))
 tempTr[pred+['y','ID']].to_csv('trainLvl2b.csv',index=0)

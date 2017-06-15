@@ -4,37 +4,49 @@ import xgboost as xgb
 '''
 PART 1
 '''
-##train=pd.read_csv('train.csv')
-##test=pd.read_csv('test.csv')
-##
-##
-##'''
-##convert string to interger
-##'''
-##for i in train.keys():
-##    if train[i].dtype=='O':
-##        print i
-##        #test first
-##        temp=train.groupby(i).y.mean().to_dict()
-##        test[i]=test[i].map(temp)
-##
-##        
-##        for value in train[i].unique():
-##            temp=train[train[i]==value]
-##            List=list(train[train[i]==value].index)
-##            # bayesian modelling, giving value of y given particular category of X0-X8
-##            for num in range(len(List)):
-##                wanted=List[0:num]+List[num+1:]
-##                temp2=temp[temp.index.isin(wanted)]
-##                temp3=np.mean(temp2.y)
-##                train=train.set_value(List[num],i,temp3)
-##        train[i]=train[i].astype(np.float64)
-##train.to_csv('train2.csv',index=0)
-##test.to_csv('test2.csv',index=0)
 train=pd.read_csv('train.csv')
+
 test=pd.read_csv('test.csv')
+
+train=train[train.y < 200]
+##test=train.iloc[::2]
+##train=train.iloc[1::2]
+
+'''
+convert string to interger
+'''
+pred =['ID',]
+for i in train.keys():
+    if train[i].dtype=='O' and len(train[i].unique()) > 5:
+        print i
+        pred += [i+'y',]
+        #test first
+        #temp=train.groupby(i).y.median().to_dict()
+        #test[i]=test[i].map(temp)
+
+        
+        for value in train[i].unique():
+            temp=train[train[i]==value]
+            temp2=test[test[i]==value]
+            List=list(train[train[i]==value].index)
+            median=np.median(temp['y'])
+            if len(List) >40:
+                test=test.set_value(temp2.index,i+'y',median)
+                # bayesian modelling, giving value of y given particular category of X0-X8
+                for num in range(len(List)):
+                    wanted=List[0:num]+List[num+1:]
+                    temp2=temp[temp.index.isin(wanted)]
+                    temp3=np.median(temp2.y)
+                    train=train.set_value(List[num],i+'y',temp3)
+        train[i+'y']=train[i+'y'].astype(np.float64)
+train[pred].to_csv('train2b.csv',index=0)
+test[pred].to_csv('test2b.csv',index=0)
+print test.corr()['y']
+#train=pd.read_csv('train2.csv')
+#test=pd.read_csv('test2.csv')
 ##
 ##
+die
 '''
 convert string to interger
 '''
