@@ -37,45 +37,32 @@ seed = 42 # was 42
 
 # define custom R2 metrics for Keras backend
 from keras import backend as K
-from guppy import hpy
+#from guppy import hpy
 
 
 
 def model_XA(train_n='train4b.csv',test_n='test4b.csv',name='test',act_func='relu',\
              loss='mean_squared_error',seed=seed,Y_transform=None,Y_invtransform=None):
-    temp = pd.read_csv(train_n,nrows=100)
-    dtypes ={}
-    for i in temp.keys():
-        if temp[i].dtype == np.int64:
-            if i =='y':
-                dtypes[i]=temp[i].dtype
-            if np.mean(temp[i]) < 1:
-                dtypes[i]=np.int8
-            else:
-                dtypes[i]=np.int32
-        elif temp[i].dtype == np.float64:
-            dtypes[i]=np.float16
-            #print i
-        else:
-            dtypes[i]=temp[i].dtype
-            print i
     
         
-    train = pd.read_csv(train_n,dtype  = dtypes,usecols=dtypes.keys())
-    test = pd.read_csv(test_n,dtype  = dtypes,usecols=dtypes.keys())
-    train = train.T.drop_duplicates().T
+    train = pd.read_csv(train_n)
+    test = pd.read_csv(test_n)
+    print train.head()
+#    train = train.T.drop_duplicates().T unsure why this breaks trainLvl2b.csv
+#    print train.head()
     train=train[train.y<200].reset_index(drop=1)
     predictors=[i for i in train.keys() if i not in ['y',]]
     test=test[predictors]
     test['y']=np.nan
+    print train.head()
     print('\nTrain shape: {}\nTest shape: {}'.format(train.shape, test.shape))
     if Y_transform != None:
         train['y']= Y_transform(train['y'])
         def r2_keras(y_true, y_pred):
             y_true = Y_invtransform(y_true)
             y_pred = Y_invtransform(y_pred)
-            SS_res =  K.sum(K.square( y_true - y_pred )) 
-            SS_tot = K.sum(K.square( y_true - K.mean(y_true) ) ) 
+            SS_res =  K.sum(K.square( y_true - y_pred ))
+            SS_tot = K.sum(K.square( y_true - K.mean(y_true) ) )
             return (1-(SS_res/(SS_tot+0.0001)))*-1+100
 ##    if Y_transform == 'lg':
 ##        train['y']= np.log10(train['y'])
@@ -87,11 +74,12 @@ def model_XA(train_n='train4b.csv',test_n='test4b.csv',name='test',act_func='rel
 ##        train['y']= 1.05**train['y']
     else:
         def r2_keras(y_true, y_pred):
-            SS_res =  K.sum(K.square( y_true - y_pred )) 
-            SS_tot = K.sum(K.square( y_true - K.mean(y_true) ) ) 
+            SS_res =  K.sum(K.square( y_true - y_pred ))
+            SS_tot = K.sum(K.square( y_true - K.mean(y_true) ) )
             return (1-(SS_res/(SS_tot+0.0001)))*-1+100
 
-
+    if loss == 'r2_keras':
+        loss = r2_keras
     def model():
         model = Sequential()
         #input layer
@@ -139,7 +127,7 @@ def model_XA(train_n='train4b.csv',test_n='test4b.csv',name='test',act_func='rel
     # In[7]:
 
     # initialize input dimension
-    input_dims = train.shape[1]-2 #ID and y
+    input_dims = train.shape[1]-2# y
 
 
     # make np.seed fixed
@@ -187,7 +175,7 @@ def model_XA(train_n='train4b.csv',test_n='test4b.csv',name='test',act_func='rel
         EarlyStopping(
             monitor='val_r2_keras', 
             patience=20, # was 10
-            verbose=1),
+            verbose=0),
         
         ModelCheckpoint(
             model_path, 
@@ -211,18 +199,19 @@ def model_XA(train_n='train4b.csv',test_n='test4b.csv',name='test',act_func='rel
         batch_size=20,
         verbose=1
         )
-        hp = hpy()
         max_n=3
         # X, y preparation
         #new_index=train['y'].apply(lambda x : int(x/5)*5).sort_values().index #stable sorted acording to fives
         #train=train.iloc[new_index].reset_index(drop=1)
         predictors = [x for x in train.keys() if name[0:5] not in x]
-        X, y = train[predictors].drop(['ID','y'], axis=1).values, train.y.values
+        print predictors
+        X, y = train[predictors].drop(['y','ID'], axis=1).values, train.y.values
         print(X.shape)
         # X_test preparation
         X_test = test
-        X_te = test[predictors].drop(['ID','y'], axis=1).values
-        print(X_test.shape)
+        X_te = test[predictors].drop(['y','ID'], axis=1).values
+        print len(X_te), 'test shape'
+        #print(test)
         if len(rounds)<9:
             while len(rounds) < 9:
                 indexes=np.random.choice(range(0,len(train)),len(train),replace=False)
@@ -235,7 +224,7 @@ def model_XA(train_n='train4b.csv',test_n='test4b.csv',name='test',act_func='rel
                     hist=estimator.fit(
                         X_tr, 
                         y_tr, 
-                        epochs=120, # increase it to 20-100 to get better results
+                        epochs=320, # increase it to 20-100 to get better results
                         validation_data=(X_val, y_val),
                         verbose=2,
                         callbacks=callbacks,
@@ -248,6 +237,7 @@ def model_XA(train_n='train4b.csv',test_n='test4b.csv',name='test',act_func='rel
             #print hp.heap()
             train[name+str(tries)]=0
             test[name+str(tries)]=0
+            print len(test.index)
             indexes=np.random.choice(range(0,len(train)),len(train),replace=False)
             for validation in range(0,max_n):
                 dtrain_index= [ i for i in indexes if i%max_n != validation]
@@ -276,7 +266,7 @@ def model_XA(train_n='train4b.csv',test_n='test4b.csv',name='test',act_func='rel
                 K.clear_session()
             train[name+str(tries)]=train[name+str(tries)].astype(np.float32)
             print train[name+str(tries)].head()
-            test[name+str(tries)]=train[name+str(tries)].astype(np.float32)
+            test[name+str(tries)]=test[name+str(tries)].astype(np.float32)
             gc.collect()
             print xgb_r2_score(train[name+str(tries)],train.y)
             #print hp.heap()
@@ -300,6 +290,7 @@ def model_XA(train_n='train4b.csv',test_n='test4b.csv',name='test',act_func='rel
         train['y'] = Y_invtransform(train['y'])
         for i in predictors:
             train[i]=Y_invtransform(train[i])
+            test[i]=Y_invtransform(test[i])
     return train[predictors+['ID','y']],test[predictors+['ID',]],predictors
 
 

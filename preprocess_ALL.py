@@ -58,9 +58,10 @@ seed = 42 # was 42
 
 from sklearn.metrics import r2_score
 def r2_keras(y_true, y_pred):
-    SS_res =  K.sum(K.square( y_true - y_pred )) 
-    SS_tot = K.sum(K.square( y_true - K.mean(y_true) ) ) 
+    SS_res =  K.square( y_true - y_pred ) 
+    SS_tot = K.square( y_true - K.mean(y_true) ) 
     return (1-(SS_res/(SS_tot+0.0001)))*-1+100
+
 def xgb_r2_score(preds, dtrain):
     return r2_score(dtrain,preds)
 
@@ -110,34 +111,9 @@ used a large test fold.
 Outputs 29 * 3 predicted values for both train and test set
 '''
 ## MSE ###
-for act_func in ['relu','tanh','sigmoid'][:]:
+for act_func in ['relu','tanh','sigmoid'][0:1]:
     for objective in [(None,None),(lg,inv_lg),(sqr,inv_sqr),(exp,inv_exp)][:-1]:
         name='keras_MSE3_%s_%s'%(dictt[objective],act_func)
-        if 'test_%s.csv'%name not in [x for x in os.listdir('.') ] and \
-           'train_%s.csv'%name not in [x for x in os.listdir('.') ]:
-            rounds =0
-            train2,test2,predictors = model_XA('train4c.csv','test4c.csv',name,act_func=act_func,\
-                                               loss='mean_squared_error',Y_transform=objective[0],Y_invtransform=objective[1]\
-                                               ,seed=0)
-            train3,test3,predictors = model_XA('train4c.csv','test4c.csv',name,act_func=act_func,\
-                                               loss='mean_squared_error',Y_transform=objective[0],Y_invtransform=objective[1]\
-                                               ,seed=20)
-            train2 = train2.merge(train3,on=['ID','y'])
-            test2 = test2.merge(test3,on='ID')
-            predictors =[ x for x in train2.keys() if x[0:5] in name]
-            train2[predictors+['ID','y',]].to_csv('train_%s.csv' %name,index=0)    
-            test2[predictors+['ID',]].to_csv('test_%s.csv'%name,index=0)
-            del test2,train2
-            import gc
-            gc.collect()
-            quit()
-        else:
-            print name
-die
-### MAE ###
-for act_func in ['relu','tanh','sigmoid'][:]:
-    for objective in [(None,None),(lg,inv_lg),(sqr,inv_sqr),(exp,inv_exp)][:-1]:
-        name='keras_MAE2_%s_%s'%(dictt[objective],act_func)
         if 'test_%s.csv'%name not in [x for x in os.listdir('.') ] and \
            'train_%s.csv'%name not in [x for x in os.listdir('.') ]:
             rounds =0
@@ -158,8 +134,34 @@ for act_func in ['relu','tanh','sigmoid'][:]:
             quit()
         else:
             print name
+
+## MAE ###
+for act_func in ['relu','tanh','sigmoid'][0:1]:
+    for objective in [(None,None),(lg,inv_lg),(sqr,inv_sqr),(exp,inv_exp)][:-1]:
+        name='keras_MAE3_%s_%s'%(dictt[objective],act_func)
+        if 'test_%s.csv'%name not in [x for x in os.listdir('.') ] and \
+           'train_%s.csv'%name not in [x for x in os.listdir('.') ]:
+            rounds =0
+            train2,test2,predictors = model_XA('train4b.csv','test4b.csv',name,act_func=act_func,\
+                                               loss='mean_absolute_error',Y_transform=objective[0],Y_invtransform=objective[1]\
+                                               ,seed=0)
+            train3,test3,predictors = model_XA('train4b.csv','test4b.csv',name,act_func=act_func,\
+                                               loss='mean_absolute_error',Y_transform=objective[0],Y_invtransform=objective[1]\
+                                               ,seed=20)
+            train2 = train2.merge(train3,on=['ID','y'])
+            test2 = test2.merge(test3,on='ID')
+            predictors =[ x for x in train2.keys() if x[0:5] in name]
+            train2[predictors+['ID','y',]].to_csv('train_%s.csv' %name,index=0)    
+            test2[predictors+['ID',]].to_csv('test_%s.csv'%name,index=0)
+            del test2,train2
+            import gc
+            gc.collect()
+            quit()
+        else:
+            print name
+
 ### R2 ###
-for act_func in ['relu','tanh','sigmoid'][:]:
+for act_func in ['relu','tanh','sigmoid'][0:1]:
     for objective in [(None,None),(lg,inv_lg),(sqr,inv_sqr),(exp,inv_exp)][:-1]:
         name='keras_MSE2_%s_%s'%(dictt[objective],act_func)
         if 'test_%s.csv'%name not in [x for x in os.listdir('.') ] and \

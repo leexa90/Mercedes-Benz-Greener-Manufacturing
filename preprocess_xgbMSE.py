@@ -3,9 +3,9 @@ import pandas as pd
 import numpy as np
 import xgboost as xgb
  
-train=pd.read_csv('train4c.csv')
+train=pd.read_csv('train4.csv')
 #train=train.merge(pd.read_csv('train2b.csv'),on='ID')
-test=pd.read_csv('test4c.csv')
+test=pd.read_csv('test4.csv')
 #test=test.merge(pd.read_csv('test2b.csv'),on='ID')
 train=train[train.y < 200]
 train = train.T.drop_duplicates().T
@@ -53,9 +53,7 @@ params['eval_metric']='rmse'
 plst = list(params.items())
 dictt={}
 for depth in [2,5,10]:
-    for child in [5,20]:
-        params["min_child_weight"] = child
-        name='xMSE3'+str(child)+'_'
+        name='xMSE2'
         print depth
         dictt[depth]=[]
         params["max_depth"] = depth
@@ -77,7 +75,7 @@ for depth in [2,5,10]:
                     watchlist  = [ (xgtrain,'train'),(xgcv,'cv')]
                     a={}
                     model=xgb.train(plst,xgtrain,8000,watchlist,early_stopping_rounds=500,\
-                                    evals_result=a, maximize=1,verbose_eval=100,feval=xgb_r2_score)
+                                    evals_result=a, maximize=1,verbose_eval=500,feval=xgb_r2_score)
                     print a['train']['r2'][model.best_iteration],a['cv']['r2'][model.best_iteration],model.best_iteration
                     rounds+=model.best_iteration/max_n
                     print rounds
@@ -101,9 +99,9 @@ for depth in [2,5,10]:
 #test[['ID','y']].to_csv('first.csv',index=0)
              
 predictors=[i for i in train.keys() if (name[0:5] in i) or i in ['ID','y']]
-train[predictors].to_csv('train_xgbMSE.csv',index=0)
+train[predictors].to_csv('train2_xgbMSE.csv',index=0)
 predictors=[i for i in test.keys() if (name[0:5] in i) or i in ['ID','y']]
-test[predictors].to_csv('test_xgbMSE.csv',index=0)
+test[predictors].to_csv('test2_xgbMSE.csv',index=0)
 '''
 0.5734342 0.00993828205311 3
 0.5816492 0.00993222393561 4

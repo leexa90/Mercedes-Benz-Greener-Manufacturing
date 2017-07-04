@@ -102,9 +102,9 @@ for i in dictt:
 #test[['ID','y']].to_csv('first.csv',index=0)
 train['y']=(train['y']) **2       
 predictors=[i for i in train.keys() if (name[0:5] in i) or i in ['ID','y']]
-train[predictors].to_csv('train_xgmse_expy.csv',index=0)
+train[predictors].to_csv('train2_xgmse_expy.csv',index=0)
 predictors=[i for i in test.keys() if (name[0:5] in i) or i in ['ID','y']]
-test[predictors].to_csv('test_xgmse_expy.csv',index=0)
+test[predictors].to_csv('test2_xgmse_expy.csv',index=0)
 '''
 0.5734342 0.00993828205311 3
 0.5816492 0.00993222393561 4

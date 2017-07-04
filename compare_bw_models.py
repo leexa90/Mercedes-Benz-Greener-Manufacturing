@@ -3,7 +3,7 @@ import numpy as np
 
 depth =pd.read_csv('train_depth.csv')
 #poisson = pd.read_csv('train_poisson.csv')
-keras = pd.read_csv('train_keras.csv')
+keras = pd.read_csv('train_depth.csv')
 #lasso = pd.read_csv('train_lasso.csv')
 from sklearn.metrics import r2_score
 def xgb_r2_score(preds, dtrain):
@@ -48,8 +48,8 @@ train = pd.read_csv('train4b.csv')
 test = pd.read_csv('test4b.csv')
 predictors=[x for x in test.keys() if x != 'ID']
 import os 
-lst_tr =[ x for x in os.listdir('.') if 'train_' in x]
-lst_ts =[ x for x in os.listdir('.') if 'test_' in x]
+lst_tr =[ x for x in os.listdir('.') if ('train_' in x or 'train2_' in x) and x.endswith('.csv') ]
+lst_ts =[ x for x in os.listdir('.') if ('test_' in x or 'test2_' in x) and x.endswith('.csv') ]
 
 
 
@@ -63,7 +63,12 @@ for i in lst_tr:
         else:
             train = pd.merge(train,temp.drop('y',axis=1),on=['ID'])
     except KeyError:
-        train= pd.merge(train,pd.read_csv(i),on=['ID'])
+        break
+        temp = pd.read_csv(i)
+        if 'y' in temp.keys():
+            train= pd.merge(train,temp,on=['y'])
+        elif 'ID' in temp.keys():
+            train= pd.merge(train,temp,on=['ID'])
     temp = pd.read_csv('test'+i[5:])
     temp.ID =temp['ID'].astype(np.int32)
     test= pd.merge(test,temp,on=['ID'])
@@ -71,8 +76,8 @@ for i in lst_tr:
     
 train=train[[x for x in train.keys() if x not in predictors]+['y',]]
 test=test[[x for x in test.keys() if x not in predictors]]
-train.to_csv('trainLvl2a.csv',index=0)
-test.to_csv('testLvl2a.csv',index=0)
+##train.to_csv('trainLvl2a.csv',index=0)
+##test.to_csv('testLvl2a.csv',index=0)
 tempTr = train[['ID','y']].copy()
 tempTs = test[['ID',]].copy()
 
@@ -87,7 +92,7 @@ for i in list(set([x[0:-1] for x in train.keys() if x!='y' and x[-2].isdigit() i
     if 'y' not in pred :
         tempTs[i] = map(lambda x :np.mean(x), np.array(test[pred]))
 
-pred =list(set([ x for  x in tempTr.keys() if  x not in ['ID','y'] and 'ridge' not in x and 'depth' not in x]))
+pred =list(set([ x for  x in tempTr.keys() if  x not in ['ID','y'] and 'ridge' not in x and 'depth' not in x and 'L2_predict' not in x]))
 pred += ['ridge_20.0_','ridge_30.0_', 'ridge_40.0_']
 tempTr['all'] = map(lambda x :np.mean(x), np.array(tempTr[pred]))
 tempTs['all'] = map(lambda x :np.mean(x), np.array(tempTs[pred]))

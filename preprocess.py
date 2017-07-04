@@ -8,10 +8,10 @@ train=pd.read_csv('train.csv')
 
 test=pd.read_csv('test.csv')
 
-train=train[train.y < 200]
-##test=train.iloc[::2]
-##train=train.iloc[1::2]
 
+test=train.iloc[1::2]
+train=train.iloc[0::2]
+train=train[train.y < 200]
 '''
 convert string to interger
 '''
@@ -46,6 +46,14 @@ print test.corr()['y']
 #test=pd.read_csv('test2.csv')
 ##
 ##
+train.set_value(train['X0y'].isnull(),'X0y',np.mean(train.X0y))
+test.set_value(test['X0y'].isnull(),'X0y',np.mean(train.X0y))
+from sklearn.metrics import r2_score
+def xgb_r2_score(preds, dtrain):
+    labels = dtrain
+    return 'r2', r2_score(labels, preds)+100
+print xgb_r2_score(test['X0y'],test.y)
+print xgb_r2_score(train['X0y'],train.y)
 die
 '''
 convert string to interger

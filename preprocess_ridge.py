@@ -149,8 +149,8 @@ def xgb_r2_score(preds, dtrain):
     labels = dtrain
     return 'r2', r2_score(labels, preds)
 
-train=pd.read_csv('train4b.csv')
-test=pd.read_csv('test4b.csv')
+train=pd.read_csv('train4c.csv')
+test=pd.read_csv('test4c.csv')
 train=train[train.y < 200]
 train = train.T.drop_duplicates().T
 predictors=[i for i in train.keys() if i not in ['y']]

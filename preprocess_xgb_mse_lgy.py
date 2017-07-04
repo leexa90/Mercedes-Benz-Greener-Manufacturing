@@ -97,9 +97,9 @@ for i in dictt:
 #test[['ID','y']].to_csv('first.csv',index=0)
 train['y']=10**(train['y'])         
 predictors=[i for i in train.keys() if (name[0:5] in i) or i in ['ID','y']]
-train[predictors].to_csv('train_xgmse_lgy.csv',index=0)
+train[predictors].to_csv('train2_xgmse_lgy.csv',index=0)
 predictors=[i for i in test.keys() if (name[0:5] in i) or i in ['ID','y']]
-test[predictors].to_csv('test_xgmse_lgy.csv',index=0)
+test[predictors].to_csv('test2_xgmse_lgy.csv',index=0)
 '''
 0.5734342 0.00993828205311 3
 0.5816492 0.00993222393561 4

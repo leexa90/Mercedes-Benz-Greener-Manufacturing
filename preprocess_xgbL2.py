@@ -11,7 +11,7 @@ target='y'
 params = {}
 params["objective"] = "reg:linear"
 params["eta"] = 0.01
-params["min_child_weight"] = 1
+params["min_child_weight"] = 15
 params["subsample"] = 0.6
 params["colsample_bytree"] = 0.6
 params["scale_pos_weight"] = 1.0
@@ -49,18 +49,32 @@ def logregobj(preds, dtrain):
     return grad, hess
 dictt={}
 for depth in [3,6,9]:
-    name='L2_predict_'
-    print depth
-    dictt[depth]=[]
-    params["max_depth"] = depth
-    plst = list(params.items())
-    rounds=0
-    for num in range(0,10):
-        train=train.sample(frac=1)
-        train[name+str(depth)+'_'+str(num)]=0
-        test[name+str(depth)+'_'+str(num)]=0
-        max_n = 5
-        if rounds ==0:
+    for child in [5,15]:
+        name='L2_predict_'+str(depth)+str(child)+'_'
+        print depth,child
+        dictt[depth]=[]
+        params["max_depth"] = depth
+        plst = list(params.items())
+        rounds=0
+        for num in range(0,20):
+            train=train.sample(frac=1)
+            train[name+str(depth)+'_'+str(num)]=0
+            test[name+str(depth)+'_'+str(num)]=0
+            max_n = 5
+            if rounds ==0:
+                for validation in range(0,max_n):
+                    dcv=train.iloc[validation::max_n]
+                    dtrain_index= [ i for i in range(len(train)) if i%max_n != validation]
+                    dtrain=train.iloc[dtrain_index]
+                    xgtrain = xgb.DMatrix(dtrain[predictors], label=dtrain[target])
+                    xgcv = xgb.DMatrix(dcv[predictors], label=dcv[target])
+                    xgtest = xgb.DMatrix(test[predictors])
+                    watchlist  = [ (xgtrain,'train'),(xgcv,'cv')]
+                    a={}
+                    model=xgb.train(plst,xgtrain,8000,watchlist,early_stopping_rounds=500,evals_result=a,feval=xgb_r2_score, maximize=1,verbose_eval=False)
+                    print a['train']['r2'][model.best_iteration],a['cv']['r2'][model.best_iteration],model.best_iteration
+                    rounds+=model.best_iteration/max_n
+                    print rounds
             for validation in range(0,max_n):
                 dcv=train.iloc[validation::max_n]
                 dtrain_index= [ i for i in range(len(train)) if i%max_n != validation]
@@ -70,29 +84,17 @@ for depth in [3,6,9]:
                 xgtest = xgb.DMatrix(test[predictors])
                 watchlist  = [ (xgtrain,'train'),(xgcv,'cv')]
                 a={}
-                model=xgb.train(plst,xgtrain,8000,watchlist,early_stopping_rounds=500,evals_result=a,feval=xgb_r2_score, maximize=1,verbose_eval=False)
-                print a['train']['r2'][model.best_iteration],a['cv']['r2'][model.best_iteration],model.best_iteration
-                rounds+=model.best_iteration/max_n
-                print rounds
-        for validation in range(0,max_n):
-            dcv=train.iloc[validation::max_n]
-            dtrain_index= [ i for i in range(len(train)) if i%max_n != validation]
-            dtrain=train.iloc[dtrain_index]
-            xgtrain = xgb.DMatrix(dtrain[predictors], label=dtrain[target])
-            xgcv = xgb.DMatrix(dcv[predictors], label=dcv[target])
-            xgtest = xgb.DMatrix(test[predictors])
-            watchlist  = [ (xgtrain,'train'),(xgcv,'cv')]
-            a={}
-            model=xgb.train(plst,xgtrain,int(rounds),watchlist,early_stopping_rounds=5000000,evals_result=a,feval=xgb_r2_score, maximize=1,verbose_eval=False)
-            train=train.set_value(dcv.index,name+str(depth)+'_'+str(num),model.predict(xgcv))
-            test.set_value(test.index,name+str(depth)+'_'+str(num),test[name+str(depth)+'_'+str(num)]+model.predict(xgtest)/max_n)
-            dictt[depth] += [a['cv']['r2'][model.best_iteration],]
-        print r2_score(train.y,train[name+str(depth)+'_'+str(num)])
-        print '\n'
+                model=xgb.train(plst,xgtrain,int(rounds),watchlist,early_stopping_rounds=5000000,evals_result=a,feval=xgb_r2_score, maximize=1,verbose_eval=False)
+                train=train.set_value(dcv.index,name+str(depth)+'_'+str(num),model.predict(xgcv))
+                test.set_value(test.index,name+str(depth)+'_'+str(num),test[name+str(depth)+'_'+str(num)]+model.predict(xgtest)/max_n)
+                dictt[depth] += [a['cv']['r2'][model.best_iteration],]
+            print r2_score(train.y,train[name+str(depth)+'_'+str(num)])
+            print '\n'
  
 #test['y']=map(lambda x:np.mean(x),np.array(test[['depth_4_0' ,  'depth_4_1',   'depth_4_2','depth_4_3','depth_4_4']]))
 #test[['ID','y']].to_csv('first.csv',index=0)
-             
+train['ID'] = train.I
+test['ID'] = test.I
 predictors=[i for i in train.keys() if (name[0:5] in i) or i in ['ID','y']]
 train[predictors].to_csv('train_%s.csv' %name,index=0)
 predictors=[i for i in test.keys() if (name[0:5] in i) or i in ['ID','y']]
